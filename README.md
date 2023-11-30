@@ -12,10 +12,3 @@ To re-summarize, the primary objectives of this capstone project are as follows:
 *	Explore applications of the trained model in daily fantasy sports and proposition betting to determine its real-world utility.
 
 To achieve these objectives, we will employ advanced statistical techniques, including Poisson regression and machine learning algorithms, to build and train the predictive model. We will rigorously evaluate the model's performance through cross-validation and statistical metrics, such as mean absolute error, root mean square error, and accuracy in predicting game outcomes.
-
-## Introduction
-### Different types of betting
-* Moneyline bets: 
-* Proposition (prop) bets:
-* Betting on the spread:
-* Betting the over/under:

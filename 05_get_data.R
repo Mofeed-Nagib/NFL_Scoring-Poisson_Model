@@ -190,4 +190,7 @@ game_data$calculated_away_final_score <- 6 * game_data$away_team_TD +
 bad_home <- game_data[game_data$home_final_score != game_data$calculated_home_final_score, ]
 bad_away <- game_data[game_data$away_final_score != game_data$calculated_away_final_score, ]
 
+game_data <- game_data[!(game_data$game_id %in% bad_home$game_id) &
+                       !(game_data$game_id %in% bad_away$game_id),]
+
 saveRDS(game_data, file = "data/aggregate_game_data.RDS")
