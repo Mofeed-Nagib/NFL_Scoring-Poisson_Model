@@ -32,13 +32,26 @@ library(rsconnect)
 library(tidyverse)
 library(pubtheme)
 
-# load the libraries for parallel processing
+# load the packages for parallel processing
 library(doSNOW)
 library(foreach)
 library(parallel)
 
-# install nflfastR package
-# install.packages("nflfastR", dependencies = TRUE)
 
+######################################
+#--- Additional Required Packages ---#
+######################################
+
+# install nflfastR package (which contains the raw dataset)
+if (!("nflfastR" %in% installed.packages()[,1])) {
+  install.packages("nflfastR", dependencies = TRUE)
+}
 # load nflfastR package
 library(nflfastR)
+
+# install bpglm package (which contains the bivariate poisson regression)
+if (!("bpglm" %in% installed.packages()[,1])) {
+  devtools::install_github("https://github.com/chowdhuryri/bpglm")
+}
+# load bpglm package
+library(bpglm)
