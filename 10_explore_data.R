@@ -1,28 +1,50 @@
-### Explore the aggregated touchdown, field goal, extra point, two point conversion
-### and safety data
+### Explore the aggregated touchdown, field goal, extra point, two point 
+### conversion and safety data
 
-# game_data <- readRDS("data/aggregate_game_data.RDS")
+# read combined game and betting data
+game_betting <- readRDS("data/game_betting_data.RDS")
 
 #========================#
 #=== Data Exploration ===#
 #========================#
 
-summary(game_data)
+# summary statistics for numerical variables
+game_betting %>%
+select(-c(game_date, game_id, home_team, 
+          away_team, home_final_score, 
+          away_final_score, team_favorite_id)) %>%
+summary()
 
-num_var <- select(game_data, -c(game_id, game_date, home_team, away_team,
-                                home_final_score, away_final_score,
-                                
-                                calculated_home_final_score, calculated_away_final_score))
+# create new dataframe with aggregated scoring events
+score_events <- data.frame(cbind(TD = c(game_betting$home_TD_count, game_betting$away_TD_count),
+                                 FG = c(game_betting$home_FG_count, game_betting$away_FG_count),
+                                 FG_attempts = c(game_betting$home_FG_attempts, game_betting$away_FG_attempts),
+                                 XP = c(game_betting$home_XP_count, game_betting$away_XP_count),
+                                 XP_attempts = c(game_betting$home_XP_attempts, game_betting$away_XP_attempts),
+                                 TWO_PT = c(game_betting$home_TWO_PT_count, game_betting$away_TWO_PT_count),
+                                 TWO_PT_attempts = c(game_betting$home_TWO_PT_attempts, game_betting$away_TWO_PT_attempts),
+                                 SAFETY = c(game_betting$home_SAFETY_count, game_betting$away_SAFETY_count),
+                                 row.names = NULL))
 
-corrplot.mixed(cor(num_var), upper = "ellipse")
+# subset game_betting dataframe to aggregated scoring events by team
+team_score_events <- game_betting %>%
+                     select(c(home_TD_count, away_TD_count,
+                              home_FG_attempts, away_FG_attempts,
+                              home_XP_attempts, away_XP_attempts,
+                              home_TWO_PT_attempts, away_TWO_PT_attempts,
+                              home_SAFETY_count, away_SAFETY_count))
+
+# visualize correlation matrices (scoring events and scoring events by teams)
+corrplot.mixed(cor(score_events), upper = "ellipse")
+corrplot.mixed(cor(team_score_events), upper = "ellipse", tl.cex = 0.6)
 
 #============================#
 #=== Touchdown Histograms ===#
 #============================#
 
-# Visualize the number of touchdowns (appears to be poisson)
-ggplot(data = data.frame(touchdowns = c(game_data$home_TD_count, game_data$away_TD_count)), 
-       aes(x = touchdowns)) +
+# visualize the number of touchdowns (appears to be poisson)
+ggplot(data = data.frame(TD = score_events$TD),
+       aes(x = TD)) +
   geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
   geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, color = "black") +
   labs(title = "Distribution of Touchdowns in NFL Games",
@@ -31,24 +53,24 @@ ggplot(data = data.frame(touchdowns = c(game_data$home_TD_count, game_data$away_
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_continuous(breaks = seq(0, 10, by = 2))
 
-# Visualize touchdown density distribution with poisson overlay
-ggplot(data = data.frame(touchdowns = c(game_data$home_TD_count, game_data$away_TD_count)), 
-       aes(x = touchdowns, y = after_stat(density))) +
+# visualize touchdown density distribution with poisson overlay
+ggplot(data = data.frame(TD = score_events$TD),
+       aes(x = TD, y = after_stat(density))) +
   geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
   labs(title = "Distribution of Touchdowns in NFL Games (w/ Poisson Overlay)",
        x = "Number of Touchdowns",
        y = "Density") +
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_continuous(breaks = seq(0, 10, by = 2)) +
-  geom_point(data = data.frame(x = 0:10, y = dpois(0:10, lambda = mean(c(game_data$home_TD_count, game_data$away_TD_count)))),
+  geom_point(data = data.frame(x = 0:10, y = dpois(0:10, lambda = mean(score_events$TD))),
              aes(x = x, y = y), color = 'red', size = 3)
 
 #=============================#
 #=== Field Goal Histograms ===#
 #=============================#
 
-# Visualize the number of field goals (appears to be poisson)
-ggplot(data = data.frame(field_goals = c(game_data$home_FG_count, game_data$away_FG_count)), 
+# visualize the number of field goals (appears to be poisson)
+ggplot(data = data.frame(field_goals = score_events$FG),
        aes(x = field_goals)) +
   geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
   geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, color = "black") +
@@ -58,8 +80,8 @@ ggplot(data = data.frame(field_goals = c(game_data$home_FG_count, game_data$away
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_continuous(breaks = seq(0, 8, by = 2))
 
-# Visualize field goal distribution with poisson overlay
-ggplot(data = data.frame(field_goals = c(game_data$home_FG_count, game_data$away_FG_count)), 
+# visualize field goal distribution with poisson overlay
+ggplot(data = data.frame(field_goals = score_events$FG),
        aes(x = field_goals, y = after_stat(density))) +
   geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
   labs(title = "Distribution of Field Goals in NFL Games (w/ Poisson Overlay)",
@@ -67,15 +89,15 @@ ggplot(data = data.frame(field_goals = c(game_data$home_FG_count, game_data$away
        y = "Density") +
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_continuous(breaks = seq(0, 8, by = 2)) +
-  geom_point(data = data.frame(x = 0:8, y = dpois(0:8, lambda = mean(c(game_data$home_FG_count, game_data$away_FG_count)))),
+  geom_point(data = data.frame(x = 0:8, y = dpois(0:8, lambda = mean(score_events$FG))),
              aes(x = x, y = y), color = 'red', size = 3)
 
 #==============================#
 #=== Extra Point Histograms ===#
 #==============================#
 
-# Visualize the number of extra points (appears to be poisson)
-ggplot(data = data.frame(extra_points = c(game_data$home_XP_count, game_data$away_XP_count)), 
+# visualize the number of extra points (appears to be poisson)
+ggplot(data = data.frame(extra_points = score_events$XP),
        aes(x = extra_points)) +
   geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
   geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, color = "black") +
@@ -85,8 +107,8 @@ ggplot(data = data.frame(extra_points = c(game_data$home_XP_count, game_data$awa
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_continuous(breaks = seq(0, 10, by = 2))
 
-# Visualize extra point distribution with poisson overlay
-ggplot(data = data.frame(extra_points = c(game_data$home_XP_count, game_data$away_XP_count)), 
+# visualize extra point distribution with poisson overlay
+ggplot(data = data.frame(extra_points = score_events$XP),
        aes(x = extra_points, y = after_stat(density))) +
   geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
   labs(title = "Distribution of Extra Points in NFL Games (w/ Poisson Overlay)",
@@ -94,15 +116,15 @@ ggplot(data = data.frame(extra_points = c(game_data$home_XP_count, game_data$awa
        y = "Density") +
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_continuous(breaks = seq(0, 10, by = 2)) +
-  geom_point(data = data.frame(x = 0:10, y = dpois(0:10, lambda = mean(c(game_data$home_XP_count, game_data$away_XP_count)))),
+  geom_point(data = data.frame(x = 0:10, y = dpois(0:10, lambda = mean(score_events$XP))),
              aes(x = x, y = y), color = 'red', size = 3)
 
 #=================================#
 #=== Two Conversion Histograms ===#
 #=================================#
 
-# Visualize the number of two point conversions (appears to be poisson)
-ggplot(data = data.frame(two_points = c(game_data$home_TWO_PT_count, game_data$away_TWO_PT_count)), 
+# visualize the number of two point conversions (appears to be poisson)
+ggplot(data = data.frame(two_points = score_events$TWO_PT), 
        aes(x = two_points)) +
   geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
   geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, color = "black") +
@@ -112,8 +134,8 @@ ggplot(data = data.frame(two_points = c(game_data$home_TWO_PT_count, game_data$a
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_continuous(breaks = seq(0, 4, by = 1))
 
-# Visualize two point conversion distribution with poisson overlay
-ggplot(data = data.frame(two_points = c(game_data$home_TWO_PT_count, game_data$away_TWO_PT_count)), 
+# visualize two point conversion distribution with poisson overlay
+ggplot(data = data.frame(two_points = score_events$TWO_PT), 
        aes(x = two_points, y = after_stat(density))) +
   geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
   labs(title = "Distribution of Two Point Conversions in NFL Games (w/ Poisson Overlay)",
@@ -121,15 +143,15 @@ ggplot(data = data.frame(two_points = c(game_data$home_TWO_PT_count, game_data$a
        y = "Density") +
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_continuous(breaks = seq(0, 4, by = 1)) +
-  geom_point(data = data.frame(x = 0:4, y = dpois(0:4, lambda = mean(c(game_data$home_TWO_PT_count, game_data$away_TWO_PT_count)))),
+  geom_point(data = data.frame(x = 0:4, y = dpois(0:4, lambda = mean(score_events$TWO_PT))),
              aes(x = x, y = y), color = 'red', size = 3)
 
 #=========================#
 #=== Safety Histograms ===#
 #=========================#
 
-# Visualize the number of safeties (appears to be poisson)
-ggplot(data = data.frame(safety = c(game_data$home_SAFETY_count, game_data$away_SAFETY_count)), 
+# visualize the number of safeties (appears to be poisson)
+ggplot(data = data.frame(safety = score_events$SAFETY), 
        aes(x = safety)) +
   geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
   geom_text(stat = "count", aes(label = after_stat(count)), vjust = -0.5, color = "black") +
@@ -139,8 +161,8 @@ ggplot(data = data.frame(safety = c(game_data$home_SAFETY_count, game_data$away_
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_continuous(breaks = seq(0, 2, by = 1))
 
-# Visualize safety distribution with poisson overlay
-ggplot(data = data.frame(safety = c(game_data$home_SAFETY_count, game_data$away_SAFETY_count)), 
+# visualize safety distribution with poisson overlay
+ggplot(data = data.frame(safety = score_events$SAFETY), 
        aes(x = safety, y = after_stat(density))) +
   geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
   labs(title = "Distribution of Safeties in NFL Games (w/ Poisson Overlay)",
@@ -148,7 +170,7 @@ ggplot(data = data.frame(safety = c(game_data$home_SAFETY_count, game_data$away_
        y = "Density") +
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_continuous(breaks = seq(0, 2, by = 1)) +
-  geom_point(data = data.frame(x = 0:2, y = dpois(0:2, lambda = mean(c(game_data$home_SAFETY_count, game_data$away_SAFETY_count)))),
+  geom_point(data = data.frame(x = 0:2, y = dpois(0:2, lambda = mean(score_events$SAFETY))),
              aes(x = x, y = y), color = 'red', size = 3)
 
 
@@ -157,8 +179,8 @@ ggplot(data = data.frame(safety = c(game_data$home_SAFETY_count, game_data$away_
 #=== Touchdown Pairwise Scatterplots ===#
 #=======================================#
 
-# Visualize the number of touchdowns vs. field goals (appears to be negatively correlated)
-ggplot(game_data, aes(x = home_TD_count, y = home_FG_count)) +
+# visualize the number of touchdowns vs. field goals (appears to be negatively correlated)
+ggplot(game_betting, aes(x = home_TD_count, y = home_FG_count)) +
   geom_point(position = position_jitter(width = 0.2, height = 0.2), 
              color = "black", size = 3, alpha = 0.7, shape = 16) +
   geom_point(aes(x = away_TD_count, y = away_FG_count), 
@@ -170,8 +192,8 @@ ggplot(game_data, aes(x = home_TD_count, y = home_FG_count)) +
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_continuous(breaks = seq(0, 10, by = 2))
 
-# Visualize the number of touchdowns vs. extra points (appears to be positively correlated)
-ggplot(game_data, aes(x = home_TD_count, y = home_XP_count)) +
+# visualize the number of touchdowns vs. extra points (appears to be positively correlated)
+ggplot(game_betting, aes(x = home_TD_count, y = home_XP_count)) +
   geom_point(position = position_jitter(width = 0.2, height = 0.2), 
              color = "black", size = 3, alpha = 0.7, shape = 16) +
   geom_point(aes(x = away_TD_count, y = away_XP_count), 
@@ -183,8 +205,8 @@ ggplot(game_data, aes(x = home_TD_count, y = home_XP_count)) +
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_continuous(breaks = seq(0, 10, by = 2))
 
-# Visualize the number of touchdowns vs. two point conversions
-ggplot(game_data, aes(x = home_TD_count, y = home_TWO_PT_count)) +
+# visualize the number of touchdowns vs. two point conversions
+ggplot(game_betting, aes(x = home_TD_count, y = home_TWO_PT_count)) +
   geom_point(position = position_jitter(width = 0.2, height = 0.2), 
              color = "black", size = 3, alpha = 0.7, shape = 16) +
   geom_point(aes(x = away_TD_count, y = away_TWO_PT_count), 
@@ -197,7 +219,7 @@ ggplot(game_data, aes(x = home_TD_count, y = home_TWO_PT_count)) +
   scale_x_continuous(breaks = seq(0, 10, by = 2))
 
 # Visualize the number of touchdowns vs. safeties
-ggplot(game_data, aes(x = home_TD_count, y = home_SAFETY_count)) +
+ggplot(game_betting, aes(x = home_TD_count, y = home_SAFETY_count)) +
   geom_point(position = position_jitter(width = 0.2, height = 0.2), 
              color = "black", size = 3, alpha = 0.7, shape = 16) +
   geom_point(aes(x = away_TD_count, y = away_SAFETY_count), 
@@ -213,8 +235,8 @@ ggplot(game_data, aes(x = home_TD_count, y = home_SAFETY_count)) +
 #=== Field Goal Pairwise Scatterplots ===#
 #========================================#
 
-# Visualize the number of field goals vs. extra points (appears to be negatively correlated)
-ggplot(game_data, aes(x = home_FG_count, y = home_XP_count)) +
+# visualize the number of field goals vs. extra points (appears to be negatively correlated)
+ggplot(game_betting, aes(x = home_FG_count, y = home_XP_count)) +
   geom_point(position = position_jitter(width = 0.2, height = 0.2), 
              color = "black", size = 3, alpha = 0.7, shape = 16) +
   geom_point(aes(x = away_FG_count, y = away_XP_count), 
@@ -226,8 +248,8 @@ ggplot(game_data, aes(x = home_FG_count, y = home_XP_count)) +
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_continuous(breaks = seq(0, 10, by = 2))
 
-# Visualize the number of field goals vs. two point conversions (appear to be negatively correlated)
-ggplot(game_data, aes(x = home_FG_count, y = home_TWO_PT_count)) +
+# visualize the number of field goals vs. two point conversions (appear to be negatively correlated)
+ggplot(game_betting, aes(x = home_FG_count, y = home_TWO_PT_count)) +
   geom_point(position = position_jitter(width = 0.2, height = 0.2), 
              color = "black", size = 3, alpha = 0.7, shape = 16) +
   geom_point(aes(x = away_FG_count, y = away_TWO_PT_count), 
@@ -239,8 +261,8 @@ ggplot(game_data, aes(x = home_FG_count, y = home_TWO_PT_count)) +
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_continuous(breaks = seq(0, 10, by = 2))
 
-# Visualize the number of field goals vs. safeties
-ggplot(game_data, aes(x = home_FG_count, y = home_SAFETY_count)) +
+# visualize the number of field goals vs. safeties
+ggplot(game_betting, aes(x = home_FG_count, y = home_SAFETY_count)) +
   geom_point(position = position_jitter(width = 0.2, height = 0.2), 
              color = "black", size = 3, alpha = 0.7, shape = 16) +
   geom_point(aes(x = away_FG_count, y = away_SAFETY_count), 
@@ -256,8 +278,8 @@ ggplot(game_data, aes(x = home_FG_count, y = home_SAFETY_count)) +
 #=== Extra Point Pairwise Scatterplots ===#
 #=========================================#
 
-# Visualize the number of extra points vs. two point conversions (appear to be negatively correlated)
-ggplot(game_data, aes(x = home_XP_count, y = home_TWO_PT_count)) +
+# visualize the number of extra points vs. two point conversions (appear to be negatively correlated)
+ggplot(game_betting, aes(x = home_XP_count, y = home_TWO_PT_count)) +
   geom_point(position = position_jitter(width = 0.2, height = 0.2), 
              color = "black", size = 3, alpha = 0.7, shape = 16) +
   geom_point(aes(x = away_XP_count, y = away_TWO_PT_count), 
@@ -269,8 +291,8 @@ ggplot(game_data, aes(x = home_XP_count, y = home_TWO_PT_count)) +
   theme(plot.title = element_text(hjust = 0.5)) +
   scale_x_continuous(breaks = seq(0, 10, by = 2))
 
-# Visualize the number of extra points vs. safeties
-ggplot(game_data, aes(x = home_XP_count, y = home_SAFETY_count)) +
+# visualize the number of extra points vs. safeties
+ggplot(game_betting, aes(x = home_XP_count, y = home_SAFETY_count)) +
   geom_point(position = position_jitter(width = 0.2, height = 0.2), 
              color = "black", size = 3, alpha = 0.7, shape = 16) +
   geom_point(aes(x = away_XP_count, y = away_SAFETY_count), 
@@ -286,8 +308,8 @@ ggplot(game_data, aes(x = home_XP_count, y = home_SAFETY_count)) +
 #=== Two Point Conversions Pairwise Scatterplots ===#
 #===================================================#
 
-# Visualize the number of two point conversions vs. safeties
-ggplot(game_data, aes(x = home_TWO_PT_count, y = home_SAFETY_count)) +
+# visualize the number of two point conversions vs. safeties
+ggplot(game_betting, aes(x = home_TWO_PT_count, y = home_SAFETY_count)) +
   geom_point(position = position_jitter(width = 0.2, height = 0.2), 
              color = "black", size = 3, alpha = 0.7, shape = 16) +
   geom_point(aes(x = away_TWO_PT_count, y = away_SAFETY_count), 
