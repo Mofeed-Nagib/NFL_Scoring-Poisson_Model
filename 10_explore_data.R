@@ -18,20 +18,17 @@ summary()
 # create new dataframe with aggregated scoring events
 score_events <- data.frame(cbind(TD = c(game_betting$home_TD_count, game_betting$away_TD_count),
                                  FG = c(game_betting$home_FG_count, game_betting$away_FG_count),
-                                 FG_attempts = c(game_betting$home_FG_attempts, game_betting$away_FG_attempts),
                                  XP = c(game_betting$home_XP_count, game_betting$away_XP_count),
-                                 XP_attempts = c(game_betting$home_XP_attempts, game_betting$away_XP_attempts),
                                  TWO_PT = c(game_betting$home_TWO_PT_count, game_betting$away_TWO_PT_count),
-                                 TWO_PT_attempts = c(game_betting$home_TWO_PT_attempts, game_betting$away_TWO_PT_attempts),
                                  SAFETY = c(game_betting$home_SAFETY_count, game_betting$away_SAFETY_count),
                                  row.names = NULL))
 
 # subset game_betting dataframe to aggregated scoring events by team
 team_score_events <- game_betting %>%
                      select(c(home_TD_count, away_TD_count,
-                              home_FG_attempts, away_FG_attempts,
-                              home_XP_attempts, away_XP_attempts,
-                              home_TWO_PT_attempts, away_TWO_PT_attempts,
+                              home_FG_count, away_FG_count,
+                              home_XP_count, away_XP_count,
+                              home_TWO_PT_count, away_TWO_PT_count,
                               home_SAFETY_count, away_SAFETY_count))
 
 # visualize correlation matrices (scoring events and scoring events by teams)
@@ -203,7 +200,8 @@ ggplot(game_betting, aes(x = home_TD_count, y = home_XP_count)) +
        x = "Number of Touchdowns",
        y = "Number of Extra Points") +
   theme(plot.title = element_text(hjust = 0.5)) +
-  scale_x_continuous(breaks = seq(0, 10, by = 2))
+  scale_x_continuous(breaks = seq(0, 10, by = 2)) +
+  scale_y_continuous(breaks = seq(0, 10, by = 2))
 
 # visualize the number of touchdowns vs. two point conversions
 ggplot(game_betting, aes(x = home_TD_count, y = home_TWO_PT_count)) +
@@ -229,7 +227,8 @@ ggplot(game_betting, aes(x = home_TD_count, y = home_SAFETY_count)) +
        x = "Number of Touchdowns",
        y = "Number of Safeties") +
   theme(plot.title = element_text(hjust = 0.5)) +
-  scale_x_continuous(breaks = seq(0, 10, by = 2))
+  scale_x_continuous(breaks = seq(0, 10, by = 2)) +
+  scale_y_continuous(breaks = seq(0, 2, by = 1))
 
 #========================================#
 #=== Field Goal Pairwise Scatterplots ===#
@@ -246,7 +245,8 @@ ggplot(game_betting, aes(x = home_FG_count, y = home_XP_count)) +
        x = "Number of Field Goals",
        y = "Number of Extra Points") +
   theme(plot.title = element_text(hjust = 0.5)) +
-  scale_x_continuous(breaks = seq(0, 10, by = 2))
+  scale_x_continuous(breaks = seq(0, 10, by = 2)) +
+  scale_y_continuous(breaks = seq(0, 10, by = 2))
 
 # visualize the number of field goals vs. two point conversions (appear to be negatively correlated)
 ggplot(game_betting, aes(x = home_FG_count, y = home_TWO_PT_count)) +
@@ -272,7 +272,8 @@ ggplot(game_betting, aes(x = home_FG_count, y = home_SAFETY_count)) +
        x = "Number of Field Goals",
        y = "Number of Safeties") +
   theme(plot.title = element_text(hjust = 0.5)) +
-  scale_x_continuous(breaks = seq(0, 10, by = 2))
+  scale_x_continuous(breaks = seq(0, 10, by = 2)) +
+  scale_y_continuous(breaks = seq(0, 2, by = 1))
 
 #=========================================#
 #=== Extra Point Pairwise Scatterplots ===#
@@ -302,13 +303,14 @@ ggplot(game_betting, aes(x = home_XP_count, y = home_SAFETY_count)) +
        x = "Number of Extra Points",
        y = "Number of Safeties") +
   theme(plot.title = element_text(hjust = 0.5)) +
-  scale_x_continuous(breaks = seq(0, 10, by = 2))
+  scale_x_continuous(breaks = seq(0, 10, by = 2)) +
+  scale_y_continuous(breaks = seq(0, 2, by = 1))
 
 #===================================================#
 #=== Two Point Conversions Pairwise Scatterplots ===#
 #===================================================#
 
-# visualize the number of two point conversions vs. safeties
+# visualize the number of two point conversions vs. safeties (appear to be negatively correlated)
 ggplot(game_betting, aes(x = home_TWO_PT_count, y = home_SAFETY_count)) +
   geom_point(position = position_jitter(width = 0.2, height = 0.2), 
              color = "black", size = 3, alpha = 0.7, shape = 16) +
@@ -319,4 +321,5 @@ ggplot(game_betting, aes(x = home_TWO_PT_count, y = home_SAFETY_count)) +
        x = "Number of Two Point Conversions",
        y = "Number of Safeties") +
   theme(plot.title = element_text(hjust = 0.5)) +
-  scale_x_continuous(breaks = seq(0, 10, by = 2))
+  scale_x_continuous(breaks = seq(0, 10, by = 2)) +
+  scale_y_continuous(breaks = seq(0, 2, by = 1))
