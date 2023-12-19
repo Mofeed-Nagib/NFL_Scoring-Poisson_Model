@@ -90,9 +90,9 @@ FG_glm <- glm(num_FG ~ team + opp.team + season + home_or_away,
 summary(FG_glm)
 
 # construct design matrix for all the predictor variables
-matrix_wo_constant <- model.matrix(~ 0 + team + opp.team + season +
-                                     home_or_away, data = combined_game_data)
-matrix_wo_constant <- matrix_wo_constant[, -c(1)] # drop first column to make matrix non-singular
+matrix_w_constant <- model.matrix(~ team + opp.team + season +
+                                    home_or_away, data = combined_game_data)
+matrix_wo_constant <- matrix_w_constant[, -c(1)] # drop intercept column
 
 # fit a multivariate Poisson regression to both touchdown and field goal data
 constants_only_indep <- bpglm(combined_game_data[,c("num_TD", "num_FG")], mtype = 1)
