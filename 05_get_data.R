@@ -193,7 +193,7 @@ game_data$home_SAFETY_count <- as.integer(game_data$home_SAFETY_count)
 game_data$away_SAFETY_count <- as.integer(game_data$away_SAFETY_count)
 
 # Add new season variable column and place it after game_date column
-game_data$season <- as.integer(format(game_data$game_date, "%Y"))
+game_data$season <- as.integer(substr(game_data$game_id, start = 1, stop = 4))
 game_data <- game_data %>%
              relocate(season, .after = game_date)
 
@@ -267,21 +267,21 @@ betting_data$schedule_date <- as.Date(betting_data$schedule_date, "%m/%d/%Y")
 betting_data$schedule_week <- as.integer(betting_data$schedule_week)
 
 # fix specific game_ids
-  # 1999-2000 superbowl
-  betting_data[betting_data$schedule_date == "2000-01-30",]$team_home <- "TEN"
-  betting_data[betting_data$schedule_date == "2000-01-30",]$team_away <- "LA"
-  # 2000-2001 superbowl
-  betting_data[betting_data$schedule_date == "2001-01-28",]$team_home <- "NYG"
-  betting_data[betting_data$schedule_date == "2001-01-28",]$team_away <- "BAL"
-  # 2001-2002 superbowl
-  betting_data[betting_data$schedule_date == "2002-02-03",]$team_home <- "NE"
-  betting_data[betting_data$schedule_date == "2002-02-03",]$team_away <- "LA"
-  # 2002-2003 superbowl
-  betting_data[betting_data$schedule_date == "2003-01-26",]$team_home <- "TB"
-  betting_data[betting_data$schedule_date == "2003-01-26",]$team_away <- "LV"
-  # 2006-2007 superbowl
-  betting_data[betting_data$schedule_date == "2007-02-04",]$team_home <- "CHI"
-  betting_data[betting_data$schedule_date == "2007-02-04",]$team_away <- "IND"
+# 1999-2000 superbowl
+betting_data[betting_data$schedule_date == "2000-01-30",]$team_home <- "TEN"
+betting_data[betting_data$schedule_date == "2000-01-30",]$team_away <- "LA"
+# 2000-2001 superbowl
+betting_data[betting_data$schedule_date == "2001-01-28",]$team_home <- "NYG"
+betting_data[betting_data$schedule_date == "2001-01-28",]$team_away <- "BAL"
+# 2001-2002 superbowl
+betting_data[betting_data$schedule_date == "2002-02-03",]$team_home <- "NE"
+betting_data[betting_data$schedule_date == "2002-02-03",]$team_away <- "LA"
+# 2002-2003 superbowl
+betting_data[betting_data$schedule_date == "2003-01-26",]$team_home <- "TB"
+betting_data[betting_data$schedule_date == "2003-01-26",]$team_away <- "LV"
+# 2006-2007 superbowl
+betting_data[betting_data$schedule_date == "2007-02-04",]$team_home <- "CHI"
+betting_data[betting_data$schedule_date == "2007-02-04",]$team_away <- "IND"
 
 
 ########################################
@@ -294,7 +294,9 @@ game_betting <- game_data %>%
                       by.y = c("schedule_date", "team_home", "team_away")) %>%
                 rename(week_of_season = schedule_week) %>%
                 relocate(game_date, game_id, season, week_of_season)
-
+  
+# drop games that do not have betting data available
+game_betting <- game_betting[!is.na(game_betting$team_favorite_id),]
 
 # save combined game and betting data to RDS
 saveRDS(game_betting, file = "data/game_betting_data.RDS")
