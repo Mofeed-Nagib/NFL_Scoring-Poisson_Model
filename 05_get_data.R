@@ -233,8 +233,9 @@ game_data <- game_data %>% select(-c(calculated_home_final_score,
 betting_data <- read_csv("rawdata/nfl_betting.csv")
 nfl_team <- read_csv("rawdata/nfl_teams.csv")
 
-# extract betting data since 1999 and drop unnecessary columns
-betting_data <- betting_data[betting_data$schedule_season >= 1999,] %>%
+# extract betting data since 1999 that are not NAs and drop unnecessary columns
+betting_data <- betting_data[betting_data$schedule_season >= 1999 &
+                             (!is.na(betting_data$team_favorite_id)),] %>%
                 select(-c(schedule_season, schedule_playoff,
                           score_home, score_away, stadium, stadium_neutral,
                           weather_temperature, weather_wind_mph,
@@ -247,6 +248,9 @@ nfl_team <- nfl_team %>%
 # make team names consistent with aggregated game data abbreviation convention
 nfl_team[nfl_team$team_id == "LVR",]$team_id <- "LV"
 nfl_team[nfl_team$team_id == "LAR",]$team_id <- "LA"
+
+betting_data[betting_data$team_favorite_id == "LVR",]$team_favorite_id <- "LV"
+betting_data[betting_data$team_favorite_id == "LAR",]$team_favorite_id <- "LA"
 
 betting_data <- betting_data %>%
                 merge(nfl_team, by.x = "team_home", by.y = "team_name") %>%
@@ -263,7 +267,7 @@ betting_data[betting_data$schedule_week == "Conference",]$schedule_week <- 20
 betting_data[betting_data$schedule_week == "Superbowl",]$schedule_week <- 21
 
 # convert columns to desired data type
-betting_data$schedule_date <- as.Date(betting_data$schedule_date, "%m/%d/%Y")
+betting_data$schedule_date <- as.Date(betting_data$schedule_date, "%m/%d/%y")
 betting_data$schedule_week <- as.integer(betting_data$schedule_week)
 
 # fix specific game_ids
