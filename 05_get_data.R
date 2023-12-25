@@ -235,23 +235,28 @@ nfl_team <- read_csv("rawdata/nfl_teams.csv")
 
 # extract betting data since 1999 that are not NAs and drop unnecessary columns
 betting_data <- betting_data[betting_data$schedule_season >= 1999 &
-                             (!is.na(betting_data$team_favorite_id)),] %>%
-                select(-c(schedule_season, schedule_playoff,
+                             !(is.na(betting_data$team_favorite_id)),] %>%
+                select(-c(schedule_season, schedule_week, schedule_playoff,
                           score_home, score_away, stadium, stadium_neutral,
                           weather_temperature, weather_wind_mph,
                           weather_humidity, weather_detail))
 
-# extract team name and team id
-nfl_team <- nfl_team %>%
-            select(team_name, team_id)
+# convert columns to desired data type
+betting_data$schedule_date <- as.Date(betting_data$schedule_date, "%m/%d/%y")
 
-# make team names consistent with aggregated game data abbreviation convention
-nfl_team[nfl_team$team_id == "LVR",]$team_id <- "LV"
-nfl_team[nfl_team$team_id == "LAR",]$team_id <- "LA"
-
+# make favorite team names consistent with game data abbreviation convention
 betting_data[betting_data$team_favorite_id == "LVR",]$team_favorite_id <- "LV"
 betting_data[betting_data$team_favorite_id == "LAR",]$team_favorite_id <- "LA"
 
+# extract team name and abbreviation from team dictionary data
+nfl_team <- nfl_team %>%
+            select(team_name, team_id)
+
+# make team names consistent with game data abbreviation convention
+nfl_team[nfl_team$team_id == "LVR",]$team_id <- "LV"
+nfl_team[nfl_team$team_id == "LAR",]$team_id <- "LA"
+
+# merge updated team names into betting data and dropping old names
 betting_data <- betting_data %>%
                 merge(nfl_team, by.x = "team_home", by.y = "team_name") %>%
                 select(-team_home) %>%
@@ -260,30 +265,23 @@ betting_data <- betting_data %>%
                 select(-team_away) %>%
                 rename(team_away = team_id)
 
-# change playoff weeks to corresponding week numbers
-betting_data[betting_data$schedule_week == "Wildcard",]$schedule_week <- 18
-betting_data[betting_data$schedule_week == "Division",]$schedule_week <- 19
-betting_data[betting_data$schedule_week == "Conference",]$schedule_week <- 20
-betting_data[betting_data$schedule_week == "Superbowl",]$schedule_week <- 21
-
-# convert columns to desired data type
-betting_data$schedule_date <- as.Date(betting_data$schedule_date, "%m/%d/%y")
-betting_data$schedule_week <- as.integer(betting_data$schedule_week)
+# drop games where point spread is 0 (i.e. essentialy a moneyline bets)
+betting_data <- betting_data[!(betting_data$team_favorite_id == "PICK"),]
 
 # fix specific game_ids
-# 1999-2000 superbowl
+# 1999-2000 Superbowl
 betting_data[betting_data$schedule_date == "2000-01-30",]$team_home <- "TEN"
 betting_data[betting_data$schedule_date == "2000-01-30",]$team_away <- "LA"
-# 2000-2001 superbowl
+# 2000-2001 Superbowl
 betting_data[betting_data$schedule_date == "2001-01-28",]$team_home <- "NYG"
 betting_data[betting_data$schedule_date == "2001-01-28",]$team_away <- "BAL"
-# 2001-2002 superbowl
+# 2001-2002 Superbowl
 betting_data[betting_data$schedule_date == "2002-02-03",]$team_home <- "NE"
 betting_data[betting_data$schedule_date == "2002-02-03",]$team_away <- "LA"
-# 2002-2003 superbowl
+# 2002-2003 Superbowl
 betting_data[betting_data$schedule_date == "2003-01-26",]$team_home <- "TB"
 betting_data[betting_data$schedule_date == "2003-01-26",]$team_away <- "LV"
-# 2006-2007 superbowl
+# 2006-2007 Superbowl
 betting_data[betting_data$schedule_date == "2007-02-04",]$team_home <- "CHI"
 betting_data[betting_data$schedule_date == "2007-02-04",]$team_away <- "IND"
 
@@ -296,8 +294,7 @@ betting_data[betting_data$schedule_date == "2007-02-04",]$team_away <- "IND"
 game_betting <- game_data %>% 
                 merge(betting_data, by.x = c("game_date", "home_team", "away_team"),
                       by.y = c("schedule_date", "team_home", "team_away")) %>%
-                rename(week_of_season = schedule_week) %>%
-                relocate(game_date, game_id, season, week_of_season)
+                relocate(game_date, game_id, season)
   
 # drop games that do not have betting data available
 game_betting <- game_betting[!is.na(game_betting$team_favorite_id),]
