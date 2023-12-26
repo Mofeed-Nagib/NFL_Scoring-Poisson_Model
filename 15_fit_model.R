@@ -57,18 +57,19 @@ sigma(FG_lm) # residual standard error (same)
 head(vcov(FG_lm)) # variance-covariance matrix (same as bottom right)
 
 # fit a multivariate Linear regression to both touchdown and field goal data
-combined_lm <- lm(cbind(num_TD, num_FG) ~ team + opp.team + season + home_or_away,
-                  data = combined_game_data)
-summary(combined_lm)
+biv_lm <- lm(cbind(num_TD, num_FG) ~ team + opp.team + season + home_or_away,
+             data = combined_game_data)
+summary(biv_lm)
 
-head(resid(combined_lm)) # residuals (same)
-head(fitted(combined_lm)) # fitted values (same)
-coef(combined_lm) # coefficients (same)
-sigma(combined_lm) # residual standard error (same)
-head(vcov(combined_lm)) # variance-covariance matrix (diff in top right and bottom left)
+head(resid(biv_lm)) # residuals (same)
+head(fitted(biv_lm)) # fitted values (same)
+coef(biv_lm) # coefficients (same)
+sigma(biv_lm) # residual standard error (same)
+head(vcov(biv_lm)) # variance-covariance matrix (diff in top right and bottom left)
 
 library(car)
-Anova(combined_lm) # all predictors are significant
+Anova(biv_lm) # all predictors are significant
+
 
 #==========================#
 #=== Poisson Regression ===#

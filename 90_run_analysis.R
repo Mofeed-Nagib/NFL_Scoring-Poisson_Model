@@ -12,4 +12,10 @@ source("05_get_data.R")
 source("10_explore_data.R")
 
 # Fit Model
-# source("15_fit_model.R")
+source("15_fit_model.R")
+
+# Run Model Simulations
+source("20_model_simulation.R")
+
+# Evaluate Model
+source("25_model_evaluation.R")
