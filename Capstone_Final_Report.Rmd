@@ -1,11 +1,15 @@
 ---
-title: "Using Poisson Regression to Model American Football Scoring and Exploit Inaccuracies in the Online Betting Market"
+title: "Using Poisson Regression to Model National Football League (NFL) Scoring and Exploit Inaccuracies in the Online Betting Market"
 author: "Mofeed Nagib"
 date: "12/17/2023"
+header-includes:
+  - \usepackage{longtable}
+  - \usepackage{caption}
 output:
   pdf_document: default
   word_document: default
 ---
+\captionsetup{width=5in}
 
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = FALSE,      ## show or suppress the code
@@ -16,69 +20,44 @@ knitr::opts_chunk$set(echo = FALSE,      ## show or suppress the code
                       fig.align = "center",      ## centers all figures
                       fig.height = 5,      ## set the default height
                       fig.weight = 5)       ## set the default width
-```
 
-```{r}
-library(ggplot2)
-library(corrplot)
+source("00_load_packages.R")
+library(stargazer)
 ```
 
 ## Abstract
-In the landscape of NFL score forecasting, existing models often treat the score as a continuous variable, overlooking the inherent patterns of scoring in American football — frequently manifesting as combinations of multiples of 3 and 7. Moreover, these models typically predict the total points scored by each team, rather than projecting scoring events (e.g., the number of touchdowns or the number of field goals) and combining them to calculate an overall score. Given these limitations, we present an innovative bivariate Poisson regression that jointly models touchdowns and field goals, recognizing their inherent inverse relationship. More specifically, this regression was fitted as a dependent (marginal/conditional) bivariate Poisson model using the [bpglm](https://github.com/chowdhuryri/bpglm) package and employs team, opposing team, season, and home/away status as predictors. The aggregate training dataset in this project was sourced from the [nflfastR](https://CRAN.R-project.org/package=nflfastR) package and [Kaggle](https://www.kaggle.com/datasets/tobycrabtree/nfl-scores-and-betting-data), and includes game details, scoring event breakdowns, and betting and spread information spanning 1999 to the present. Our model achieves an accuracy of nearly 53% in correctly predicting both the spread and the over-under, demonstrating some efficacy in capturing the nuanced dynamics of NFL scoring.
 
-## Executive Summary
-<!-- An executive summary is typically longer than the abstract, up to a page, could possibly contain key visualizations, tables, or other figures that help communicate either the raw data or the results of the model, and is intended for someone outside of the data science/analytics team of an organization. It is important to be as concise as possible, and describe each of those points above without using language that is overly technical and not part of commonly used English. The executive summary is a separate document.  -->
+In the landscape of NFL score forecasting, existing models often treat the score as a continuous variable, overlooking the inherent patterns of scoring in American football — frequently manifesting as combinations of multiples of 3 and 7. Moreover, these models typically forecast the total points scored by each team, rather than projecting scoring events (e.g., the number of touchdowns and field goals) and summing them to calculate the cumulative predicted score. Given these limitations, we present an innovative Poisson regression that models the discrete nature of NFL scoring. More specifically, we fit a dependent bivariate Poisson regression that jointly models the number of touchdowns and number of field goals, using team, opposing team, season, and home/away status as predictors. The aggregate training dataset in this project was sourced from the [nflfastR](https://CRAN.R-project.org/package=nflfastR) package and [Kaggle](https://www.kaggle.com/datasets/tobycrabtree/nfl-scores-and-betting-data), and includes game details, scoring event breakdowns, and betting and spread information spanning 1999 to the present. Our model achieves an accuracy of around 53% in correctly predicting both the spread and the over-under, demonstrating some efficacy in capturing the nuanced dynamics of NFL scoring.
 
-<!-- Note that in the abstract, executive summary, and throughout the report you should avoid using first-person singular pronouns like "I" and "me", even if you are the only author. Use "we" or use passive voice.  -->
+\newpage
 
 ## Introduction
 
-The past decade has witnessed a substantial increase in the popularity of online gambling, particularly in the realm of sports betting. Online sportsbooks like DraftKings and FanDuel have risen to prominence in the industry, with the National Football League (NFL) standing out as the most popular league to bet on. In an attempt to gain a competitive edge, many enthusiasts have turned to statistical models that analyze various factors such as player performance, team dynamics, and historical data. However, one common oversight in the majority of these models is their treatment of the game score as a continuous variable. In reality, scoring in American football often follows a distinctive pattern, characterized by combinations of multiples of 3 and 7. Furthermore, most of the these models focus on predicting the final score as a single outcome rather than forecasting the individual scoring events that contribute to it. Hence, a more nuanced exploration of score breakdown could be essential to enhancing the predictive accuracy of these models.
+The past decade has witnessed a substantial increase in the popularity of online gambling, particularly in the realm of sports betting. Online sportsbooks like DraftKings and FanDuel have risen to prominence in the industry, with the National Football League (NFL) emerging as the predominant league for betting. In an effort to gain a competitive edge, many sports betting enthusiasts have turned to statistical models and advanced analytics to inform their betting decisions. These sophisticated methodologies often involve analyzing player performance, team statistics, historical trends, and various other factors to make more informed predictions. While many of these models have achieved success to a certain extent, they typically rely on certain glaring assumptions that fail to accurately capture the dynamics of play in the NFL.
 
-In the NFL, there are five possible ways to score points: touchdowns, field goals, extra points, safeties, and two-point conversions. A touchdown is the most valuable play, worth six points, achieved when a player crosses the opponent's goal line with possession of the ball or catches a pass in the end zone. Following a touchdown, teams have the option to attempt an extra point by kicking the ball through the goalposts for one additional point or go for a two-point conversion by running or passing the ball into the end zone. Field goals, worth three points, come into play when a team successfully kicks the ball through the opposing team's uprights. Safeties are rare but impactful scoring opportunities, occurring when the defense tackles an offensive player in their own end zone, awarding the defensive team two points. Hence, any points scored can be attributed to one of these five categories. It is important to note that games with defensive two-point conversions are excluded from this analysis, due to their brief history and limited occurrence.
+One of the most common oversights in these models is their treatment of the game score as a continuous response variable. The primary flaw in this approach lies in the fact that NFL scoring is both positive and discrete, introducing a critical discrepancy in accurately reflecting the nature of scoring events in the game. In actuality, scoring in the NFL follows a distinctive pattern, characterized by combinations of multiples of 3 and 7. Moreover, the score of the game is the result of summing together a discrete number of scoring events for a cumulative final score, so forecasting the final score should inherently account for these distinct and structured elements. Therefore, these models would better align with the scoring dynamics in the NFL if they project scoring events and aggregating them appropriately to predict the final score.
 
-To compile a dataset containing these scoring category breakdowns, we utilized detailed play-by-play data obtained through the [nflfastR](https://CRAN.R-project.org/package=nflfastR) package. This dataset spans from the 1999 season to the present, encompassing almost 400 variables that cover everything from play details and game specifics to team statistics and player details, and various other advanced metrics. Subsequently, this dataset was joined with game betting data sourced from [Kaggle](https://www.kaggle.com/datasets/tobycrabtree/nfl-scores-and-betting-data), which contained simple game details (date, teams, and scores, etc.), and corresponding spread and over/under lines. In the forthcoming analysis, we leverage the scoring category breakdown data for training our bivariate Poisson model, while assessing the model's quality with betting odds data to gauge its performance against Vegas.
+Poisson regression is a widely used statistical method for predicting the number of events occurring within a fixed interval. It is particularly well-suited for situations where events are rare and occur independently within a specified time or space. Poisson regression models are founded on the Poisson distribution, which assumes that the events of interest are discrete and that the probability of each event occurring is constant over time or space. In sports analytics, Poisson regression excels at capturing the inherent randomness and infrequency of scoring events. For instance, it has been particularly successful in modeling the sporadic nature of goal-scoring in soccer and hockey. We propose that the assumptions of Poisson regression, designed for modeling stochastic and infrequent scoring occurrences, are applicable and effective in the context of the NFL. This makes it a promising method for modeling touchdowns, field goals, and other scoring events in American football, given its adeptness at capturing inherent variability. Hence, a more in-depth understanding of scoring breakdowns in the NFL is imperative for developing accurate predictive models using Poisson regression.
 
-Section 2 of this report contains the data explorations and visualizations, which show the near Poisson di
+In the NFL, there are five possible ways to score points: touchdowns, field goals, extra points, two-point conversions, and safeties. The most valuable scoring play is the touchdown, worth six points, which occurs when a player crosses the opponent's goal line with possession of the ball or catches a pass in the end zone. Field goals, worth three points, are achieved by successfully kicking the ball through the opponent's goalposts at varying distances on the field. Following a touchdown, the scoring team can score an extra point by kicking the ball through the uprights in the manner of a field goal, or a two-point conversion by passing or running the ball into the end zone in the manner of a touchdown. Both extra points and two-point conversions are attempted from the two-yard line in the play immediately following a touchdown. Finally, safeties occur when the offensive team is tackled, forced out of bounds, or commits a penalty in their own end zone, awarding the defensive team two points and possession. It is important to note that in 2015, the NFL introduced defensive two-point conversions, allowing defenses to earn two points by returning a conversion attempt to the opposing end zone; however, given their brief history and limited occurrence, we have opted to omit the few games featuring this scoring event from the subsequent analysis.
 
+There are four basic bet types available across nearly every sport: moneylines, spreads, totals, and parlays. Moneylines, the simplest of the four, involve betting on the outright winner of a game, with odds assigned to each team based on their perceived likelihood of winning. Spreads, on the other hand, introduce a handicap to level the playing field between two teams of uneven strength. The favored team must win by more than the specified margin, while the underdog can lose by less than that margin or win outright. Totals, also known as over/under bets, involve predicting whether the combined score of both teams will be over or under a set number determined by the sportsbook. Lastly, parlays are a more complex betting type where bettors combine multiple individual bets into a single wager. While parlays offer the potential for higher payouts, they require all included bets to be correct for the overall bet to win, making them riskier but more rewarding if successful. We utilize predicted spread bet and over/under accuracy to evaluate the quality of our proposed model.
 
-which reveal the fairly clear Poisson relationship of each scoring type. Furthermore, we have a correlation matrix plot and a few pairwise scatterplots that show some of the positive and negative correlations between number of each scoring type. In section 3, we build our several different models for this
+The training dataset for this model was constructed using play-by-play data acquired through the [nflfastR](https://CRAN.R-project.org/package=nflfastR) package, alongside game betting data sourced from [Kaggle](https://www.kaggle.com/datasets/tobycrabtree/nfl-scores-and-betting-data). The nflfastR dataset contains NFL play-by-play data spanning from the 1999 season to the present, and contains nearly 400 variables, covering everything from team statistics and player details to drive and series specifics, as well as binary variables indicating each scoring event. The Kaggle betting odds dataset contains simple game details (date, teams, and scores, etc.), and the closing point spread and over/under line for every game, ranging from the 1966 season to the present. In the forthcoming analysis, we leverage the scoring category breakdown data for training our Poisson regression model, while assessing the model's quality with betting odds data to gauge its performance against Vegas.
 
-
-<!-- A few paragraphs that contain the following: -->
-
-<!-- - background on the topic you are studying, including the motivation behind the project and the problem statement you mentioned in the abstract, but in more detail -->
-<!-- - a description of the data -->
-<!-- - a sentence or paragraph describing what is contained in each section of the rest of the paper. Include roughly one sentence per section, that describes what is in the section and the main takeaways from each section.  For example,  -->
-
-<!-- > "Section 2 contains data exploration and visualization, which reveals that *****.  In Section 3, we build several different predictive models and find that *****. We discuss the results of the model, including *****, in Section 4. Finally, we discuss conclusions, recommendations and ideas for future work in Section 5." -->
-
-<!-- There are similarities between the introduction and the abstract. The introduction is longer and more detailed, especially in terms of background, previous work, and motivation of the problem, and contains a brief outline of the contents of the rest of the paper. -->
-
-
-
-of tallying the occurrences of individual scoring events, such as the number of touchdowns and field goals, and summing those to get a predicted score. 
-
-Moreover, these models tend to predict the score itself rather than counting the number of individual scoring events (e.g. number of touchdowns and number of field goals)
-
-no Poisson-based models have been considered, although these models are common in other random appearing sports like soccer and hockey,
-
-The training dataset for this model was compiled from detailed play-by-play records obtained through the [nflfastR](https://CRAN.R-project.org/package=nflfastR) package and betting odds data sourced from [Kaggle](https://www.kaggle.com/datasets/tobycrabtree/nfl-scores-and-betting-data). 
+Section 2 of the report examines the data aggregation process, presenting data explorations, visualizations, and a correlation matrix plot illustrating positive and negative correlations among scoring types, highlighting a clear Poisson relationship for each. Section 3 involves fitting two models—a univariate Poisson regression for touchdowns and field goals independently, and a bivariate Poisson regression for their dependent relationship. Section 4 employs our model to simulate game outcomes and subsequently applies these results to the online betting market, evaluating the effectiveness and predictive accuracy of our model in forecasting game outcomes. Finally, in Section 5, we delve into the discoveries made by our model, offer suggestions for refining it, and discuss prospective directions for future research to address some of its identified shortcomings
 
 ## Data exploration and visualization 
 
-The primary data extraction and processing operations are performed in the `05_get_data.R` script, consolidating all the information that we will need to train and evaluate the model. Within this script, we iterated through play-by-play data for each game, tallying the number of touchdowns, field goals, extra points, two-point conversion attempts, and safeties. Following this, we integrated this data with the associated spread and over/under data for the respective games. Ultimately, we filtered out games where the scoring breakdown did not sum to the original final scores of the game or if the betting data is absent for that particular game. It is also important to note that this analysis excludes games featuring defensive two-point conversions, due to their brief history and limited occurrence. This data preparation concluded with aggregate data for 6,597 of the 6,630 games played since 1999, providing a comprehensive foundation for subsequent model training and evaluation. Below is a table that lists all the variables we aggregated along with their corresponding descriptions.
-
+The primary data extraction and processing operations are performed in the `05_get_data.R` script, consolidating all the information that we will need to train and evaluate the model. Within this script, we iterated through the play-by-play data for each game since 1999, tallying the number of touchdowns, field goals, extra points, two-point conversion, and safeties. Following this, we merged that aggregated data with the closing point spread and over/under line data for each respective games. Lastly, we filtered out games where the scoring breakdown did not sum to the original final scores of the game (i.e. games that featured a defensive two-point conversion) or if the betting data is absent or the point spread is 0 (i.e. essentially a moneyline bet) for that particular game. Ultimately, this data preparation culminated in scoring and betting information for 6,583 of the 6,640 games played since 1999, providing a comprehensive foundation for subsequent model training and evaluation. Below is a table that lists all the variables we included along with their corresponding descriptions.
 $$
 \begin{tabular}{|c|c|c|}
 \hline
-Variable Name & Variable Type & Variable Description \\
+\textbf{Variable Name} & \textbf{Variable Type} & \textbf{Variable Description} \\
 \hline
 game\_id & Categorical & Unique identifier for each game\\
 \hline
 game\_date & Numerical & Date of the game (YYYY-MM-DD)\\
-\hline
-week_of_season & Categorical & Week of the season (i.e. 1 - 21)\\
 \hline
 season & Categorical & Season of the game (YYYY)\\
 \hline
@@ -94,27 +73,27 @@ home\_TD\_count & Numerical & Home team's touchdown count\\
 \hline
 away\_TD\_count & Numerical & Away team's touchdown count\\
 \hline
-home\_FG\_count & Numerical & Home team's field goal count\\
+home\_FG\_count & Numerical & Home team's made field goal count\\
 \hline
 home\_FG\_attempts & Numerical & Home team's field goal attempt count\\
 \hline
-away\_FG\_count & Numerical & Away team's field goal count\\
+away\_FG\_count & Numerical & Away team's made field goal count\\
 \hline
 away\_FG\_attempts & Numerical & Away team's field goal attempt count\\
 \hline
-home\_XP\_count & Numerical & Home team's extra point count\\
+home\_XP\_count & Numerical & Home team's good extra point count\\
 \hline
 home\_XP\_attempts & Numerical & Home team's extra point attempt count\\
 \hline
-away\_XP\_count & Numerical & Away team's extra point count\\
+away\_XP\_count & Numerical & Away team's good extra point count\\
 \hline
 away\_XP\_attempts & Numerical & Away team's extra point attempt count\\
 \hline
-home\_TWO\_PT\_count & Numerical & Home team's two point conversion count\\
+home\_TWO\_PT\_count & Numerical & Home team's successful two point conversion count\\
 \hline
 home\_TWO\_PT\_attempts & Numerical & Home team's two point conversion attempt count\\
 \hline
-away\_TWO\_PT\_count & Numerical & Away team's two point conversion count\\
+away\_TWO\_PT\_count & Numerical & Away team's successful two point conversion count\\
 \hline
 away\_TWO\_PT\_attempts & Numerical & Away team's two point conversion attempt count\\
 \hline
@@ -130,13 +109,8 @@ over\_under\_line & Numerical & Expected total combined score of both teams\\
 \hline
 \end{tabular}
 $$
-
-Although we had 
-
-
-
-
-```{r}
+Using this consolidated dataset, we investigated the suitability of a Poisson distribution for modeling each scoring event. For each of the five scoring categories, we consolidated the tallied values for both home and away teams, resulting in two rows per game. One row represents the home team with their tallied scoring event values, and the other row represents the away team with their respective tallied values, totaling 13,166 observations overall. Subsequently, for each of the five scoring categories, we generated a histogram overlaid with a Poisson distribution for their respective mean frequency. Below are the five plots, and while the overlay of the Poisson distribution does not precisely match the histogram distributions, indicating some difference between their mean and variance, they exhibit a notable resemblance in overall patterns. Hence, it can be reasonably asserted that the underlying assumptions of Poisson regression are adequately satisfied.
+```{r, fig.height = 8}
 game_betting <- readRDS("data/game_betting_data.RDS")
 
 score_events <- data.frame(cbind(TD = c(game_betting$home_TD_count, game_betting$away_TD_count),
@@ -146,111 +120,187 @@ score_events <- data.frame(cbind(TD = c(game_betting$home_TD_count, game_betting
                                  SAFETY = c(game_betting$home_SAFETY_count, game_betting$away_SAFETY_count),
                                  row.names = NULL))
 
-corrplot.mixed(cor(score_events), upper = "ellipse")
-
+library(gridExtra)
 
 # visualize touchdown density distribution with poisson overlay
-ggplot(data = data.frame(TD = score_events$TD),
+TD <- ggplot(data = data.frame(TD = score_events$TD),
        aes(x = TD, y = after_stat(density))) +
   geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
-  labs(title = "Distribution of Touchdowns in NFL Games (w/ Poisson Overlay)",
+  labs(title = "Distribution of Touchdowns w/ Poisson Overlay",
        x = "Number of Touchdowns",
        y = "Density") +
-  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10)) +
   scale_x_continuous(breaks = seq(0, 10, by = 2)) +
   geom_point(data = data.frame(x = 0:10, y = dpois(0:10, lambda = mean(score_events$TD))),
-             aes(x = x, y = y), color = 'red', size = 3)
+             aes(x = x, y = y), color = 'red', size = 2)
 
 # visualize field goal distribution with poisson overlay
-ggplot(data = data.frame(field_goals = score_events$FG),
+FG <- ggplot(data = data.frame(field_goals = score_events$FG),
        aes(x = field_goals, y = after_stat(density))) +
   geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
-  labs(title = "Distribution of Field Goals in NFL Games (w/ Poisson Overlay)",
+  labs(title = "Distribution of Field Goals w/ Poisson Overlay",
        x = "Number of Field Goals",
        y = "Density") +
-  theme(plot.title = element_text(hjust = 0.5)) +
+  theme(plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10)) +
   scale_x_continuous(breaks = seq(0, 8, by = 2)) +
   geom_point(data = data.frame(x = 0:8, y = dpois(0:8, lambda = mean(score_events$FG))),
-             aes(x = x, y = y), color = 'red', size = 3)
+             aes(x = x, y = y), color = 'red', size = 2)
 
-# visualize the number of touchdowns vs. field goals (appears to be negatively correlated)
-ggplot(game_betting, aes(x = home_TD_count, y = home_FG_count)) +
-  geom_point(position = position_jitter(width = 0.2, height = 0.2), 
-             color = "black", size = 3, alpha = 0.7, shape = 16) +
-  geom_point(aes(x = away_TD_count, y = away_FG_count), 
-             position = position_jitter(width = 0.2, height = 0.2), 
-             color = "black", size = 3, alpha = 0.7, shape = 16) +
-  labs(title = "Touchdowns vs Field Goals in NFL Games",
-       x = "Number of Touchdowns",
-       y = "Number of Field Goals") +
-  theme(plot.title = element_text(hjust = 0.5)) +
-  scale_x_continuous(breaks = seq(0, 10, by = 2))
+# visualize extra point distribution with poisson overlay
+XP <- ggplot(data = data.frame(extra_points = score_events$XP),
+       aes(x = extra_points, y = after_stat(density))) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of Extra Points w/ Poisson Overlay",
+       x = "Number of Extra Points",
+       y = "Density") +
+  theme(plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10)) +
+  scale_x_continuous(breaks = seq(0, 10, by = 2)) +
+  geom_point(data = data.frame(x = 0:10, y = dpois(0:10, lambda = mean(score_events$XP))),
+             aes(x = x, y = y), color = 'red', size = 2)
+
+# visualize two point conversion distribution with poisson overlay
+TWO_PT <- ggplot(data = data.frame(two_points = score_events$TWO_PT), 
+       aes(x = two_points, y = after_stat(density))) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of Two Point Conversions\nw/ Poisson Overlay",
+       x = "Number of Two Point Conversions",
+       y = "Density") +
+  theme(plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10)) +
+  scale_x_continuous(breaks = seq(0, 4, by = 1)) +
+  geom_point(data = data.frame(x = 0:4, y = dpois(0:4, lambda = mean(score_events$TWO_PT))),
+             aes(x = x, y = y), color = 'red', size = 2)
+
+# visualize safety distribution with poisson overlay
+SAFETY <- ggplot(data = data.frame(safety = score_events$SAFETY), 
+       aes(x = safety, y = after_stat(density))) +
+  geom_histogram(binwidth = 1, fill = "blue", color = "black", alpha = 0.7) +
+  labs(title = "Distribution of Safeties w/ Poisson Overlay",
+       x = "Number of Safeties",
+       y = "Density") +
+  theme(plot.title = element_text(hjust = 0.5, size = 10),
+        axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10)) +
+  scale_x_continuous(breaks = seq(0, 2, by = 1)) +
+  geom_point(data = data.frame(x = 0:2, y = dpois(0:2, lambda = mean(score_events$SAFETY))),
+             aes(x = x, y = y), color = 'red', size = 2)
+
+grid.arrange(TD, FG, XP, TWO_PT, SAFETY, ncol = 2, heights = c(2, 2, 2))
 ```
-
-
-This section will have descriptive statistics and visualizations of the raw data.  Use this section to reveal to the reader any interesting relationships in the data, and convince the reader that the predictors are related to the outcome. Visualizations are one of the most powerful ways to communicate information to the reader, so it is important to spend time producing clear, descriptive, eye-catching visualizations.
-
-The package `pubtheme` has a `ggplot` theme called `theme_pub` that helps with making publication-quality visualizations with `ggplot`. See https://github.com/bmacGTPM/pubtheme. There are also several templates there that you can copy, paste, and modify. 
-
-If you display a data visualization or some other summary of data, discuss the significance of what you see. What does this tell you about the data? What does it tell you that will help you with modeling? Do not simply show a visualization for the sake of showing a visualization.
-
-Since `echo=F` is the option chosen at the top, the default will be to show the output but not the code: 
+Subsequently, we explored the relationship between each of the five scoring types by plotting the correlation matrix shown below. Given the games' limited duration (60-minute regulation time plus a potential 15-minute overtime) and scoring procedures, it is understandable that certain scoring events may exhibit correlation with one another. For instance, given that each touchdown is followed by either an extra point or a two-point conversion, it makes sense that both conversion types positively correlated with touchdowns. However, considering that the vast majority of conversion attempts after touchdowns are extra points, it follows that there is a notably stronger positive association between touchdowns and extra points compared to touchdowns and two-point attempts. This also implies that the two conversion types are negatively correlated with one another, as opting for one implies forgoing the other, and vice versa. Furthermore, given the limited game duration and consequent restriction on the number of drives for each team, it stands to reason that touchdowns and field goals are negatively correlated, as more drives resulting in touchdowns reduce the number of possible drives that result in field goals and vice versa. Consequently, a similar negative relationship is expected between extra points and two-point conversions in relation to field goals, considering that both types of conversions directly follow touchdowns. Finally, since safeties are inherently random and unrelated to other scoring events, it follows that they are uncorrelated with the four other scoring types.
 ```{r}
-1+1
+corrplot.mixed(cor(score_events), upper = "ellipse")
 ```
-
-If you don't want to show the output either, you can use `include=F`:
-```{r, include = F}
-1+1
-```
-
-Nothing was shown above. If you want to force it to show the code for some reason, you can override the default by putting the options `echo=T` for this chunk.
-```{r, echo = T}
-1+1
-```
-
-However, since this is a formal report, you will likely not want to show code. 
 
 ## Modeling/Analysis
 
-When building our model for this project, we had hoped to use all five scoring categories to 
+```{r, include = FALSE}
+# subset data for home teams and corresponding score breakdown
+home_game_data <- game_betting %>%
+                  select(game_id, game_date, season, home_team, 
+                         away_team, home_TD_count, home_FG_count) %>%
+                  mutate(home_or_away = "home") %>%
+                  relocate(home_or_away, .after = away_team)
 
-<!-- $$Y_{TD} = e^{\beta_{0} \:+\: \beta_{ATL}\,X_{ATL} \:+\: \beta_{BAL}\,X_{BAL} + \cdots + }$$ -->
+# subset data for away teams and corresponding score breakdown
+away_game_data <- game_betting %>%
+                  select(game_id, game_date, season, away_team,
+                         home_team, away_TD_count, away_FG_count) %>%
+                  mutate(home_or_away = "away") %>%
+                  relocate(home_or_away, .after = home_team)
 
-More specifically, the joint bivariate Poisson distribution was fit as the product of a marginal and conditional Poisson distribution
+# rename columns to match for home team data
+colnames(home_game_data) <- c('game_id', 'game_date', 'season', 'team',
+                              'opp.team', 'home_or_away', 'num_TD', 'num_FG')
 
-Describe regression or classification model(s) used, or the analysis that was performed. For each regression or classification model, discuss 
+# rename columns to match for away team data
+colnames(away_game_data) <- c('game_id', 'game_date', 'season', 'team',
+                              'opp.team', 'home_or_away', 'num_TD', 'num_FG')
 
-- any assumptions that are made
-- the observation, the predictors, and the outcome (aka the rows of $X$, the columns of $X$, and $y$)
-- what model you are using, and write out the model
-- what the coefficients mean (when applicable) and how this is related to your problem 
-- appropriate measures of the performance of the model, such as measures of fit and predictive ability
-- whether or not you think the model is appropriate for this kind of data, and why, and
-- how easy/hard it is to interpret the results and explain them to either a technical or non-technical audience.
+# bind the home game and away game data together (now have two rows for each game)
+combined_game_data <- bind_rows(home_game_data, away_game_data) %>%
+                      arrange(game_date, game_id)
 
-For other kinds of analysis, what you give is highly dependent on the type of analysis. But in general, talk about assumptions, if they are appropriate, how they might not be appropriate, and why you chose this type of analysis. 
+# convert columns to desired data type for performing regression
+combined_game_data$season <- as.character(combined_game_data$season)
+
+# fit a univariate Poisson regression to aggregate touchdown data
+TD_glm <- glm(num_TD ~ team + opp.team + season + home_or_away,
+              data = combined_game_data, family = poisson)
+
+# fit a univariate Poisson regression to aggregate field goal data
+FG_glm <- glm(num_FG ~ team + opp.team + season + home_or_away,
+              data = combined_game_data, family = poisson)
+
+# construct design matrix for all the predictor variables
+matrix_w_constant <- model.matrix(~ team + opp.team + season +
+                                    home_or_away, data = combined_game_data)
+matrix_wo_constant <- matrix_w_constant[, -c(1)] # drop intercept column
+
+# dependent bivariate Poisson regression (returns same coeffs for TD, diff coeffs for FG)
+full_dep_model <- bpglm(combined_game_data[,c("num_TD", "num_FG")],
+                        matrix_wo_constant, matrix_wo_constant, mtype = 2)
+```
+
+Poisson regression relies on four key assumptions. Firstly, the response variable should follow a Poisson distribution, representing counts per unit of time or space. In our case, this assumption is clearly met as we are specifically modeling the tallies for each of the five NFL scoring categories, which all seemingly follow a Poisson distribution. Secondly, the observations must be independent of each other, ensuring that the occurrence of an event does not influence the likelihood of another. While there are two rows dedicated to each game (one for home team scoring tallies and the other for away team scoring tallies), the tallies for each game are independent, ensuring that the outcome of one game has no bearing on the outcome of another. Thirdly, the mean of the Poisson random variable must equal its variance, emphasizing a crucial property of the Poisson distribution. Based on the histograms plotted above, the distribution of counts for each of the five scoring categories resemble a Poisson distribution, sufficiently satisfying this requirement. Lastly, the linearity assumption dictates that the natural logarithm of the mean rate (log($\lambda$)) must form a linear relationship with the predictor variable x. Since all the predictors are categorical variables, the linearity assumption is inherently satisfied, as the levels of the categorical predictor variables are modeled as binary indicators and a straight line always fits two points exactly.
+
+Using the aggregated scoring data, we aimed to develop a multivariate Poisson regression model incorporating all five scoring categories as response variables. However, this proved to be unfeasible due to the sparse literature regarding multivariate Poisson regression and the lack of available programming libraries that support it. After scouring a wide range of R packages and Python libraries, we were only able to source a bivariate Poisson regression model using the [bpglm](https://github.com/chowdhuryri/bpglm) package, meaning that our model was limited to considering only two scoring categories simultaneously. Since touchdowns and field goals stand out as the two most common and valuable scoring events, we opted to regress on them, using number of touchdowns and number of field goals as the response variables. Additionally, in response to this constraint, we also decided to fit separate univariate Poisson regression models for each scoring category independently. While this approach may neglect potential cross-category interactions, it would enable us to capture the distinctive relationships between each scoring category and the predictors. Nevertheless, to ensure comparability with the bivariate Poisson model, we only consider the univariate Poisson models that regress on touchdowns and field goals.
+
+To resummarize, we constructed two models: (1) a pair of univariate Poisson regressions (one regressing on touchdowns and the other on field goals), each fit with the `glm()` function, and (2) a bivariate Poisson regression (regressing on both touchdowns and field goals, fit with the `bpglm()` function. Both models were trained on all 13,166 observations of the dataset and use the same categorical predictors - team, opposing team, season, and home/away status. The team and opposing team variables encompass 32 levels each, representing every NFL team. The season variable consists of 25 levels, corresponding to each season from 1999 through 2023. Additionally, the home/away status variable includes 2 levels, indicating whether the game is played at home or away. Therefore, our Poisson regression model comprises 88 coefficients for each response variable, which is the result of incorporating an intercept term and excluding one level from each of the four predictors (specifically ARI, ARI, 1999, and away). Consequently, we have included the coefficient summaries for both models in the appendix. Tables 1 and 2 refer to the coefficients for the univariate Poisson regression on touchdowns and field goals, respectively, while Table 3 refers to the coefficients for the bivariate Poisson regression on both touchdowns and field goals.
+
+The general form of the univariate model is given by the equations
+$$\lambda_{TD} = e^{\beta_{TD\_Intercept} \:+\: \beta_{TD\_teamATL}\,X_{teamATL} \:+\: \cdots \:+\: \beta_{TD\_opp.teamATL}\,X_{opp.teamATL} \:+\: \cdots \:+\: \beta_{TD\_2000}\,X_{2000} \:+\: \cdots \:+\: \beta_{TD\_home}\,X_{home}}$$
+and
+$$\lambda_{FG} = e^{\beta_{FG\_Intercept} \:+\: \beta_{FG\_teamATL}\,X_{teamATL} \:+\: \cdots \:+\: \beta_{FG\_opp.teamATL}\,X_{opp.teamATL} \:+\: \cdots \:+\: \beta_{FG\_2000}\,X_{2000} \:+\: \cdots \:+\: \beta_{home}\,X_{home}}$$
+In these expressions, the $\beta$ coefficients with the prefix $TD$ correspond to Table 1, while those with the prefix $FG$ correspond to Table 2, and the $X$ inputs are indicator variables that are dependent on specific game details (meaning that at most four of the $X$ inputs can evaluate to 1). 
+
+The coefficients in Poisson Regression can be interpreted as the logarithm of the rate ratio or percentage change in the expected count of the dependent variable associated with a one-unit change in the corresponding independent variable, holding all other variables constant. In our case, this one-unit change is relative to the base level that was dropped from each of the predictors (i.e. ARI, ARI, 1999, and away, respectively). For instance, $\beta_{TD\_teamBUF}$ has a coefficient of 0.0610786, meaning that the Buffalo Bills (BUF) would be expected to score $e^{0.0610786} = 1.062982$ times as many touchdowns as the Arizona Cardinals (ARI), had they both played away, in 1999, against the Arizona Cardinals. Although this interpretation does not make much sense, as it is a comparison to ARI playing against ARI, which is impossible, it gives a good metric of which teams is better. Similarly, the interpretation for $\beta_{FG\_teamBAL}$, which has a coefficient value of 0.2429988, is that the Baltimore Ravens (BAL) would be expected to score $e^{0.2429988} = 1.275067$ times as many field goals as the Arizona Cardinals (ARI), had they both played away, in 1999, against the Arizona Cardinals. Moreover, we can interpret $\beta_{TD\_season2015}$ with a coefficient value of $0.0887177$ as saying that the we would expected $e^{0.0887177} = 1.092772$ times as many touchdowns in the 2015 season as in the 1999 season, had the Arizona Cardinals (ARI) played the Arizona Cardinals (ARI). Again, while the interpretation seems illogical, it illustrates the increase in touchdowns score count between the two seasons. Finally, given the $\beta_{FG\_opp.teamJAX}$ coefficient of -0.0270338, it can be interpreted as playing against the Jacksonville Jaguars (JAX) is associated with a $1 - e^{-0.0270338} = 0.0266717 \approx 2.6%$ reduction in the expected number of field goals, again, holding all other predictors constant.
+
+In the case of the bivariate Poisson regression, it was quite challenging to interpret exactly what was happening under-the-hood of the `bpglm()` function due to the limited documentation, but from what we gather, the bivariate model is an untruncated, dependent (marginal/conditional) bivariate Poisson model that accounts for the inherent negative correlation between touchdown and field goal counts. Hence, the interpretation of $\lambda_{TD}$ should be the same as in the univariate model; however, there is not much clarity on the interpretation of $\lambda_{FG}$. Based on the functions documentation, the model is fit such that the joint pdf follows the equation
+$$g(y_{TD}, y_{FG}) = \frac{e^{-\lambda_{TD}} \left(\lambda_{TD}^{y_{TD}}\right) \cdot e^{-\lambda_{FG} \:\cdot\: y_{TD}} \left(\lambda_{FG} \cdot y_{TD}\right)^{y_{FG}}}{y_{TD}! \cdot y_{FG}!}, \;\;\;\; y_{TD} = 0, 1,\,...;\;y_{FG} = 0, 1,\,...;\;\lambda_{TD}, \lambda_{FG} > 0$$
+where the number of touchdown occurrences $Y_{TD}$ in a given interval follows a Poisson distribution with parameter $\lambda_{TD}$, and the number of field goal occurrences $Y_{FG}$, for a given $Y_{TD}$, is also Poisson with parameter $\lambda_{FG} \cdot y_{TD}$. Hence, we can see that the expected number of field goals scored is dependent on the expected number of touchdowns scored, meaning that this model theoretically takes into account the inherent negative correlation between the two scoring events.
 
 ## Visualization and interpretation of the results
-Create visualizations of the results when appropriate, focusing on visualizations that 
 
-- help describe aspects of the results that have real-world interpretation 
-- help the reader understand how the model addresses the problem you are studying. 
+To assess the effectiveness of our models, we evaluated how well it would perform in the online betting market. In the case of the univariate model, we used the `predict()` function to calculate the $\lambda_{TD}$ and $\lambda_{FG}$ for the home and away team in each game of our training dataset (i.e. all 13,166 observations). Using each pair of $\lambda_{TD}$ and $\lambda_{FG}$, we simulated the number of touchdowns ($y_{TD}$) and field goals ($y_{FG}$) scored 1,000 times by sampling from their respective Poisson distributions. Subsequently, we computed corresponding final score for each simulation using the generated touchdown and field goal values. For simplicity, we assumed a scoring system of 7 points for each touchdown and 3 points for each field goal. Hence, we now had 1000 simulated final scores based on the Poisson distributions of touchdowns and field goals. Next, we calculated the difference and sum of scores for each of the 1,000 simulation of each game, reducing the dataset back down to 6,583 observations. Using the reported closing point spread and over/under line for each game, we determined the proportion of simulations that surpassed the point spread and over/under line, as well as those that fell below these benchmarks, and "bet" on the higher of the two proportions for each of the two betting types. In other words, we selected the betting strategy that had a greater likelihood based on the simulation outcomes, aligning our bets with the more favorable predicted scenario. In the bivariate model, we conducted similar simulations as in the previous case. However, since the `bpglm` function lacked a `predict()` equivalent, in each of the 1,000 simulations, we additionally sampled a set of beta values from the beta distribution. These beta values were then utilized to compute both $\lambda_{TD}$ and $\lambda_{FG}$ for the simulations.
 
-**Visualizations are one of the most powerful ways to communicate information to the reader, so it is important to spend time producing clear, descriptive, eye-catching visualizations.**
+Finally, to evaluate the accuracy of our predictions, we determined how the predicted bets performed (i.e. whether they won or not) against the true outcomes of the 6,583 games. The univariate model consistently predicts both the point spread and over/under with around 51% accuracy, whereas the bivariate model consistently predicts both with approximately 53% accuracy. Hence, both models surpass random guessing, demonstrating their capability to discern some underlying patterns within the data. Moreover, the enhanced accuracy of the bivariate model can be attributed to it's ability to capture the inherent negative correlation between the number of touchdowns and field goals scored by a team. However, it's crucial to approach these results with a dose of skepticism. While the univariate and bivariate models showcase a modest improvement over random guessing, their predictive capabilities may not be as remarkable as they initially seem. Both models only marginally surpassed the 50% threshold, and despite attempts at experimental optimization, there was minimal enhancement in their betting accuracy. Consequently, we began to suspect an error in the fundamental assumption of a Poisson regression model.
 
-Discuss the results of the model or models you chose, and describe how they are related to the problem statement or question that you were trying to answer in the project.  
-
-If you have built multiple models or types of analysis, compare the measures of performance and the ease of interpretability across models or types of analysis, stating which model or models performed best, and which model or models were most interpretable.  Finally, decide which model or type of analysis is best for your particular problem based on some combination of performance and interpretability.
+To investigate the performance issues observed in our models, we conducted a thorough examination of the dispersion of the data. This analysis revealed a notable overdispersion, challenging the Poisson regression assumption that the response variables exhibit equidispersion. The presence of overdispersion implies that the variability in the data is higher than what the Poisson distribution can adequately capture. This finding prompted a critical reassessment of our modeling approach, leading us to consider alternative methodologies. Given the observed overdispersion, a negative binomial model emerges as a promising candidate for more accurately representing the underlying patterns in the data. Unlike the Poisson model, the negative binomial distribution accommodates varying levels of dispersion, making it better suited to handle the complexities inherent in our dataset. Hence, a future analysis fitting a negative binomial model to our data will likely provide more accurate and reliable results. Additionally, we plan to incorporate more covariates and explore potential sources of heterogeneity to further enhance the model's predictive power.
 
 ## Conclusions and recommendations
-One or two paragraphs stating conclusions, recommendations, and ideas for future work and improvements.
 
+In conclusion, our exploration into NFL score forecasting has revealed promising insights and challenges. The traditional approach of treating scores as continuous variables has limitations in capturing the nuanced dynamics of American football scoring, particularly the distinctive patterns involving multiples of 3 and 7. Our innovative bivariate Poisson regression model, focusing on touchdowns and field goals, has demonstrated an accuracy of around 53% in predicting both the spread and over-under in the online betting market. While this surpasses random guessing, the observed overdispersion in the data calls for a reevaluation of our modeling approach. The Poisson regression's assumption of equidispersion appears violated, prompting consideration of a negative binomial model for a more accurate representation.
+
+Moving forward, we plan to further research incorporating a negative binomial model to address overdispersion. This alternative modeling approach has the potential to enhance predictive accuracy by accommodating the variability present in NFL scoring data. Additionally, incorporating features like player statistics, weather conditions, and team dynamics as additional covariates could introduce valuable insights and improve the overall accuracy of the predictions. Furthermore, considering temporal dynamics, such as trends across different seasons or changes in team strategies over time, will contribute to a more adaptive and robust forecasting model. Moreover, leveraging advanced machine learning techniques such as ensemble models and deep learning architectures might offer additional avenues for improvement.
+
+\newpage
 ## Appendix (optional)
-Any supporting information or additional information that isn't necessary to have in the main body of the paper. For example, huge tables can go here, especially if they are more than one page. Tables that are, for example, 100 pages most likely should not be included at all.
-
+```{r, results = 'asis'}
+kable(summary(TD_glm)$coefficients, align = "ccccc", caption = "Coefficients Summary for Univariate Poisson Regression on Touchdowns", longtable = TRUE)
+```
+\newpage
+```{r, results = 'asis'}
+kable(summary(FG_glm)$coefficients, align = "ccccc", caption = 'Coefficients Summary for Univariate Poisson Regression on Field Goals', longtable = TRUE)
+```
+\newpage
+```{r, results = 'asis'}
+coeffs <- data.frame(full_dep_model$coeff[,c(1:2, 6)], full_dep_model$coeff[,2]/full_dep_model$coeff[,6], full_dep_model$coeff[,c(7)])
+kable(coeffs, col.names = c("", "Coefficients", "Standard Error", "t-value", "p-value"), align = "ccccc", format = "latex", caption = "Coefficients Summary for Bivariate Poisson Regression on Touchdowns and Field Goals", longtable = TRUE)
+```
+\newpage
 ## Work Cited
 1. Gifford, Matt, and Tuncay Bayrak. “A predictive analytics model for forecasting outcomes in the National Football League games using decision tree and logistic regression.” *Decision Analytics Journal*, vol. 8, Sept. 2023, https://doi.org/10.1016/j.dajour.2023.100296.
 2. The Factory of Sadness. “Machine Learning Model for NFL Betting (Model 5.0).” *Medium*, Medium, 15 May 2023, medium.com/@bravenewworld21/machine-learning-model-for-nfl-betting-model-5-0-8e916428c330. 
 3. AlMuhayfith, Fatimah E., et al. “On bivariate Poisson Regression Models.” *Journal of King Saud University - Science*, vol. 28, no. 2, Apr. 2016, pp. 178–189, https://doi.org/10.1016/j.jksus.2015.09.003.
 4. Ford, Clay. “Getting Started with Multivariate Multiple Regression.” *UVA Library StatLab*, 27 Oct. 2017, library.virginia.edu/data/articles/getting-started-with-multivariate-multiple-regression.
+5. https://bmacgtpm.github.io/notes
+
+\newpage
