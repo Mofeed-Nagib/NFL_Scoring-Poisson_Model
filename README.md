@@ -20,7 +20,7 @@ To re-summarize, the primary objectives of this capstone project are as follows:
 * **90_run_process.R:** This R script runs the analysis, builds the model, and simulates the output (i.e. calls all the previous files).
 * **Final_Capstone_Project.Rproj:** This is the R project file for this capstone.
 * **rawdata/**
-	* **raw_play-by-play.RDS:** This RDS object file contains the raw play-by-play data for every game since 1999.
+	* **raw_play-by-play.RDS:** This RDS object file contains the raw play-by-play data for every game since 1999. (**Too large to be uploaded**)
 	* **nfl_betting.csv:** This CSV file contains the point spread and over/under betting data for every game since 1966.
 	* **nfl_teams.csv:** This CSV file contains a dictionary of team information (e.g. team name, abbreviation, conference, division) for all past and present teams.
 * **data/**
