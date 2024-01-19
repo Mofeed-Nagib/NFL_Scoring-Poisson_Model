@@ -10,9 +10,9 @@ game_betting <- readRDS("data/game_betting_data.RDS")
 
 # summary statistics for numerical variables
 game_betting %>%
-select(-c(game_date, game_id, home_team, 
-          away_team, home_final_score, 
-          away_final_score, team_favorite_id)) %>%
+select(-c(game_id, home_team, away_team, 
+          home_final_score, away_final_score, 
+          team_favorite_id)) %>%
 summary()
 
 # create new dataframe with aggregated scoring events

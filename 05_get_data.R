@@ -265,7 +265,7 @@ betting_data <- betting_data %>%
                 select(-team_away) %>%
                 rename(team_away = team_id)
 
-# drop games where point spread is 0 (i.e. essentialy a moneyline bets)
+# drop games where point spread is 0 (i.e. essentially a moneyline bets)
 betting_data <- betting_data[!(betting_data$team_favorite_id == "PICK"),]
 
 # fix specific game_ids
