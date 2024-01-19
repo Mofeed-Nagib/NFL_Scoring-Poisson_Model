@@ -8,7 +8,21 @@ The core of this project relies on a comprehensive dataset of NFL game scores. T
 To re-summarize, the primary objectives of this capstone project are as follows:
 * Develop a predictive model based on Poisson distributions to simulate NFL scores.
 *	Assess the model's accuracy in predicting NFL scores compared to traditional methods.
-*	Investigate whether the Poisson distribution-based model can outperform the betting line or spread in predicting game outcomes.
-*	Explore applications of the trained model in daily fantasy sports and proposition betting to determine its real-world utility.
+*	Investigate how well the Poisson distribution-based model can predict game outcomes and outperform Vegas lines.
 
-To achieve these objectives, we will employ advanced statistical techniques, including Poisson regression and machine learning algorithms, to build and train the predictive model. We will rigorously evaluate the model's performance through cross-validation and statistical metrics, such as mean absolute error, root mean square error, and accuracy in predicting game outcomes.
+## File Hierarchy
+* **00_load_packages.R:** This R script initializes all the necessary R packages for our data processing and Poisson regression model.
+* **05_get_data.R:** This R script performs the data extraction and preparation that aggregates game-by-game scoring breakdown data from the play-by-play data sourced from the [nflfastR](https://CRAN.R-project.org/package=nflfastR) package, and merges it with the corresponding game betting data sourced from [Kaggle](https://www.kaggle.com/datasets/tobycrabtree/nfl-scores-and-betting-data).
+* **10_explore_data.R:** This R script contains summary statistics and various descriptive plots of the aggregated scoring data, including various histograms and pairwise plots, as well as a correlation matrix.
+* **15_fit_model.R:** This R script fits the univariate and bivariate Linear and Poisson regression models to the aggregated scoring data.
+* **20_model_simulations.R:** This R script simulations the game result using each of our 4 regression models and calculates the predicted score sum and predicted score difference.
+* **25_model_evaluation.R:** This R script compares the simulated score sum and score difference to the over/under line and the point spread to determine the best bet, and evaluates the quality of the model predictions by comparing the accuracy of those bets to the true outcome of the game.
+* **90_run_process.R:** This R script runs the analysis, builds the model, and simulates the output (i.e. calls all the previous files).
+* **Final_Capstone_Project.Rproj:** This is the R project file for this capstone.
+* **rawdata/**
+	* **raw_play-by-play.RDS:** This RDS object file contains the raw play-by-play data for every game since 1999.
+	* **nfl_betting.csv:** This CSV file contains the point spread and over/under betting data for every game since 1966.
+	* **nfl_teams.csv:** This CSV file contains a dictionary of team information (e.g. team name, abbreviation, conference, division) for all past and present teams.
+* **data/**
+	* **game_data.RDS:** This RDS object file contains the aggregated scoring data (i.e. number of touchdowns, field goals, extra points, two-point conversions, and safeties) for every game since 1999.
+	* **game_betting_data.RDS:** This RDS object file contains the merged scoring and betting data (i.e. point spread and over/under line) for every game since 1999.

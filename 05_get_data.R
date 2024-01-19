@@ -224,6 +224,8 @@ game_data <- game_data[!(game_data$game_id %in% bad_home$game_id) &
 game_data <- game_data %>% select(-c(calculated_home_final_score,
                                      calculated_away_final_score))
 
+saveRDS(game_data, file = "data/game_data.RDS")
+
 
 ##################################
 #--- Game Betting Market Data ---#
@@ -242,7 +244,7 @@ betting_data <- betting_data[betting_data$schedule_season >= 1999 &
                           weather_humidity, weather_detail))
 
 # convert columns to desired data type
-betting_data$schedule_date <- as.Date(betting_data$schedule_date, "%m/%d/%y")
+betting_data$schedule_date <- as.Date(betting_data$schedule_date, "%m/%d/%Y")
 
 # make favorite team names consistent with game data abbreviation convention
 betting_data[betting_data$team_favorite_id == "LVR",]$team_favorite_id <- "LV"
